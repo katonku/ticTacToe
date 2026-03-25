@@ -1,105 +1,103 @@
 import Darwin
 
+let symbol = (
+    default: " ",
+    symbolOne: "X",
+    symbolTwo: "O"
+)
+
+var playField = [[String]]()
+
 print(
     """
     Welcome to TicTacToe!
     ---------------------
     """)
 
-var nameOne: String = ""
-while nameOne == "" {
-    print("Player 1 nickname is:")
-    nameOne = getUserInput()
-    guard nameOne != "" else {
-        print("Nickname can not be empty")
-        continue
-    }
-}
-
-let playerOne = (name: nameOne, sign: "X")
-
-var nameTwo: String = ""
-while nameTwo == "" {
-    print("Player 2 nickname is:")
-    nameTwo = getUserInput()
-    guard nameTwo != "" else {
-        print("Nickname can not be empty")
-        continue
-    }
-}
-
-let playerTwo = (name: nameTwo, sign: "O")
-
-let minSize = 2
-let maxSize = 6
-var size: Int = 0
-let cellDefaultValue = " "
-while size > maxSize || size < minSize {
-    print("Enter playfield size in \(minSize) and \(maxSize):")
-    let potentialSize = getUserInput()
-    guard let potentialSize = Int(potentialSize),
-          potentialSize > minSize && potentialSize < maxSize else {
-        print("Size is incorrect")
-        continue
-    }
-    size = potentialSize
-    break
-}
-
-var playField = createPlayField(size)
-printPlayField()
-print(
-    """
-    Let's play begines!
-    -------------------
-    """)
-
 while true {
-    makeTurn(playerOne)
-    makeTurn(playerTwo)
-}
-
-func makeTurn(_ player: (name: String, sign: String)) {
-    print("\(player.name), your turn!")
-    var lineIndex: Int = 0
-    var columnIndex: Int = 0
+    
+    let nameOne = getUserNickName("Input player 1 nickname")
+    
+    let playerOne = (name: nameOne, sign: symbol.symbolOne)
+    
+    let nameTwo = getUserNickName("Input player 2 nickname")
+    
+    let playerTwo = (name: nameTwo, sign: symbol.symbolTwo)
+    
+    let playFieldSize = getFieldSize()
+    
+    playField = createPlayField(playFieldSize)
+    
+    printPlayField()
+    
+    print(
+        """
+        Let's play begines!
+        -------------------
+        """)
     
     while true {
-        print("Enter line number:")
-        let l = getPlayFieldIndex()
+        makeStep(playerOne)
+        printPlayField()
+        if isWin() {
+            print("\(playerOne.name) is a WINNER")
+            break
+        }
+        if isGameFinished() {
+            print("The game is over")
+            break
+        }
+        makeStep(playerTwo)
+        printPlayField()
+        if isWin() {
+            print("\(playerOne.name) is a WINNER")
+            break
+        }
+        if isGameFinished() {
+            print("The game is over")
+            break
+        }
+    }
+    
+    let newGameChoose = getUserInput("For new game input 'y'")
+    guard newGameChoose == "y" else {
+        exit(0)
+    }
+    print("---------------------")
+    continue
+}
+
+
+
+func makeStep(_ player: (name: String, sign: String)) {
+    print("\(player.name), your turn!")
+    var lineIndex: Int
+    var columnIndex: Int
+    
+    while true {
+        lineIndex = getIndex("Enter line number")
+        columnIndex = getIndex("Enter column number")
         
-        print("Enter column number:")
-        let c = getPlayFieldIndex()
-        
-        guard playField[l][c] == cellDefaultValue else {
-            print("This cell alredy filled. Coose another.")
+        guard playField[lineIndex][columnIndex] == symbol.default else {
+            print("This cell alredy filled. Choose another.")
             continue
         }
-        lineIndex = l
-        columnIndex = c
         break
     }
     
     playField[lineIndex][columnIndex] = player.sign
-    printPlayField()
 }
 
-func getPlayFieldIndex() -> Int {
-    var index: Int = 0
-    
+func getIndex(_ description: String) -> Int {
     while true {
-        let coordinate = getUserInput()
-        guard let coordinate = Int(coordinate),
-              coordinate > 0,
-              coordinate <= playField.count else {
+        let coordinate = getUserInput(description)
+        guard let c = Int(coordinate), c > 0, c <= playField.count
+        else {
             print("Number should be from 1 to \(playField.count)")
             continue
         }
-        index = coordinate - 1
-        break
+        return c - 1
     }
-    
-    return index
 }
 
 func createPlayField(_ size: Int) -> [[String]] {
@@ -107,7 +105,7 @@ func createPlayField(_ size: Int) -> [[String]] {
     for _ in 0..<size {
         var line: [String] = []
         for _ in 0..<size {
-            line.append(cellDefaultValue)
+            line.append(symbol.default)
         }
         playField.append(line)
     }
@@ -116,9 +114,9 @@ func createPlayField(_ size: Int) -> [[String]] {
 
 func printPlayField() {
     print("Now the playfield is like that: ")
-    for i in 0...(size * 2  + 1) {
+    for i in 0...(playField.count * 2  + 1) {
         let isEvenLine = i % 2 == 0 ? true : false
-        for j in 0...(size * 2 + 1) {
+        for j in 0...(playField.count * 2 + 1) {
             let isEvenElement = j % 2 == 0 ? true : false
             let havePrintRowNumber = i == 0 && isEvenElement
             let havePrintLineNumber = j == 0 && i > 0 && isEvenLine
@@ -142,11 +140,112 @@ func printPlayField() {
     }
 }
 
-func getUserInput() -> String {
+func getUserInput(_ description: String? = nil) -> String {
+    if let description {
+        print(description)
+    }
     return readLine() ?? ""
 }
 
+func getUserNickName(_ description: String) -> String {
+    var name = String()
+    while name.isEmpty {
+        name = getUserInput(description)
+        guard !name.isEmpty else {
+            print("Nickname can not be empty")
+            continue
+        }
+    }
+    return name
+}
 
+func getFieldSize() -> Int {
+    while true {
+        let minSize = 2
+        let maxSize = 6
+        let size = getUserInput("Enter playfield size in \(minSize) and \(maxSize):")
+        guard let size = Int(size), size >= minSize && size <= maxSize
+        else {
+            print("Size is incorrect. Try again.")
+            continue
+        }
+        return size
+    }
+}
+
+func isGameFinished() -> Bool {
+    for i in 0..<playField.count {
+        for j in 0..<playField.count {
+            if playField[i][j] == symbol.default {
+                return false
+            }
+        }
+    }
+    return true
+}
+
+func isWinOnRow() -> Bool {
+    for i in 0..<playField.count {
+        let firstSymbol = playField[i][0]
+        if firstSymbol != symbol.default {
+            for j in 1..<playField.count {
+                if playField[i][j] != firstSymbol {
+                    return false
+                }
+            }
+            return true
+        }
+    }
+    return false
+}
+
+func isWinOnColumn() -> Bool {
+    for i in 0..<playField.count {
+        let firstSymbol = playField[i][0]
+        if firstSymbol != symbol.default {
+            for j in 1..<playField.count {
+                if playField[j][i] != firstSymbol {
+                    return false
+                }
+            }
+            return true
+        }
+    }
+    return false
+}
+
+func isWinOnMainDiagonal() -> Bool {
+    let firstSymbol = playField[0][0]
+    if firstSymbol != symbol.default {
+        for i in 1..<playField.count {
+            if playField[i][i] != firstSymbol {
+                return false
+            }
+        }
+        return true
+    }
+    return false
+}
+
+func isWinOnSubDiagonal() -> Bool {
+    let firstSymbol = playField[0][playField.count - 1]
+    if firstSymbol != symbol.default {
+        for i in 1..<playField.count {
+            if playField[i][playField.count - i - 1] != firstSymbol {
+                return false
+            }
+        }
+        return true
+    }
+    return false
+}
+
+func isWin() -> Bool {
+    return isWinOnRow()
+    || isWinOnColumn()
+    || isWinOnMainDiagonal()
+    || isWinOnSubDiagonal()
+}
 
 
  
